@@ -428,6 +428,51 @@ class TestInt8DynamicActivationIntxWeight(unittest.TestCase):
                 granularity=PerGroup(64),
             )
 
+    def test_moe_quant(self):
+        from torchao.quantization.prototype.moe_quant.quantizable_moe_modules import MOEFeedForwardAOQuantizable
+        from torchao.quantization.prototype.moe_quant.utils import MoEQuantConfig, cond_ffn_filter, FakeExtraDimTensor
+        from torchao.quantization.quant_api import Int8DynamicActivationIntxWeightConfig, PackedLinearInt8DynamicActivationIntxWeightLayout, quantize_
+        from torchao.quantization.utils import compute_error
+
+        with torch.device("cuda"):
+            model = MOEFeedForwardAOQuantizable(512, 256, 8, 2).to(torch.bfloat16)
+            x = torch.randn(8, 512, dtype=torch.bfloat16)
+
+        out = model(x).clone()
+
+        # base_config = Int8DynamicActivationIntxWeightConfig()
+        base_config = Int8DynamicActivationIntxWeightConfig(layout = PackedLinearInt8DynamicActivationIntxWeightLayout())
+        moe_config = MoEQuantConfig(base_config)
+
+        quantize_(model, moe_config, cond_ffn_filter)
+
+
+        out_q = model(x).clone()
+        assert isinstance(model.experts.w1, FakeExtraDimTensor)
+
+        mod_c = torch.compile(model, mode="reduce-overhead")
+
+        mod_c(x)
+        mod_c(x)
+
+
+        out_qc = mod_c(x).clone()
+
+        print(compute_error(out_q, out))
+        print(compute_error(out_qc, out))
+        
+        assert compute_error(out_q, out)>30 and compute_error(out_qc, out)>30, "error bad accuracy but everything ran"
+
+        
+
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

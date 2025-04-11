@@ -82,6 +82,8 @@ class LinearActivationQuantizedTensor(TorchAOBaseTensor):
     def _quantized_linear_op(
         input_tensor: torch.Tensor, weight_tensor: torch.Tensor, bias: torch.Tensor
     ):
+        if input_tensor.numel() == 0:
+            return input_tensor
         input_quant_func = weight_tensor.input_quant_func
         original_weight_tensor = weight_tensor.original_weight_tensor
         quant_kwargs = weight_tensor.quant_kwargs
