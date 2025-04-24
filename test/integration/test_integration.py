@@ -314,9 +314,9 @@ class SmoothquantUnitTest(unittest.TestCase):
         sqnr_fq = compute_error(y_smooth_fq_only, y_dynamic_q)
         # print('sqnr_smooth', sqnr_smooth_fq, 'sqnr_dynamic', sqnr_dynamic_q, 'sqnr_fq', sqnr_fq)
 
-        assert torch.allclose(
-            y_ref, y_smooth_nocalib
-        ), "y_ref not close to y_smooth_nocalib"
+        assert torch.allclose(y_ref, y_smooth_nocalib), (
+            "y_ref not close to y_smooth_nocalib"
+        )
         # after https://github.com/pytorch-labs/ao_benchmarks/pull/32,
         # numerics do not match exactly between production c++ code
         # and this Python code
@@ -1338,9 +1338,9 @@ class TestSaveLoadMeta(unittest.TestCase):
         model_qc = torch.compile(model, mode="max-autotune")
         ref_q = model_qc(x).detach()
 
-        assert (
-            SQNR(ref_f, ref_q) > min_sqnr
-        ), f"got sqnr: {SQNR(ref_f, ref_q)}, expected: {min_sqnr}"
+        assert SQNR(ref_f, ref_q) > min_sqnr, (
+            f"got sqnr: {SQNR(ref_f, ref_q)}, expected: {min_sqnr}"
+        )
 
         # load model structure
         with torch.device("meta"):
@@ -1360,9 +1360,9 @@ class TestSaveLoadMeta(unittest.TestCase):
         model_qc = torch.compile(model, mode="max-autotune")
         test = model_qc(x).detach()
 
-        assert (
-            SQNR(ref_f, test) > min_sqnr
-        ), f"got sqnr: {SQNR(ref_f, ref_q)}, expected: {min_sqnr}"
+        assert SQNR(ref_f, test) > min_sqnr, (
+            f"got sqnr: {SQNR(ref_f, ref_q)}, expected: {min_sqnr}"
+        )
         self.assertTrue(torch.equal(ref_q, test))
 
     @parameterized.expand(COMMON_DEVICE_DTYPE)
@@ -1593,15 +1593,17 @@ class TestAutoQuant(unittest.TestCase):
     @unittest.skipIf(not TORCH_VERSION_AT_LEAST_2_5, "autoquant requires 2.5+.")
     def test_autoquant_compile(self, device, dtype, m1, m2, k, n):
         undo_recommended_configs()
-        
+
         # Check if we're running on a supported device
         is_cuda_available = torch.cuda.is_available()
         is_rocm_available = torch.version.hip is not None
-        is_supported_device = device == "cuda" and (is_cuda_available or is_rocm_available)
-        
+        is_supported_device = device == "cuda" and (
+            is_cuda_available or is_rocm_available
+        )
+
         if not is_supported_device:
             self.skipTest(f"autoquant currently does not support {device}")
-            
+
         # Check CUDA-specific requirements if running on CUDA
         if is_cuda_available and not is_rocm_available:
             device_capability = torch.cuda.get_device_capability()
@@ -1610,7 +1612,7 @@ class TestAutoQuant(unittest.TestCase):
                     self.skipTest("bfloat16 requires sm80+")
                 if m1 == 1 or m2 == 1:
                     self.skipTest(f"Shape {(m1, m2, k, n)} requires sm80+")
-                    
+
         # Skip certain shapes on older PyTorch versions
         if (m1 == 1 or m2 == 1) and not TORCH_VERSION_AT_LEAST_2_5:
             self.skipTest(f"Shape {(m1, m2, k, n)} requires torch version > 2.4")
