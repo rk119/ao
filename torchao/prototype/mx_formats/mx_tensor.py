@@ -18,7 +18,7 @@ Exponent E8M0 encoding details (OCP spec section 5.4.1):
 """
 
 from enum import Enum, auto
-from typing import Dict, Union
+from typing import Callable, Dict, Union
 
 import torch
 
@@ -562,7 +562,7 @@ class MXTensor(torch.Tensor):
         from torchao.prototype.mx_formats.mx_ops import MX_OPS_TABLE
 
         if func in MX_OPS_TABLE:
-            return MX_OPS_TABLE[func](func, args, kwargs)
+            return MX_OPS_TABLE[func](func, types, args, kwargs)
 
         raise NotImplementedError(f"{func} not implemented")
 
@@ -629,6 +629,22 @@ class MXTensor(torch.Tensor):
             metadata["_use_fp4_custom_triton_dequant_kernel"],
             metadata["_gemm_kernel_choice"],
             metadata["_pack_fp6"],
+        )
+
+    def _apply_fn_to_data(self, fn: Callable):
+        """Applies a fn to all tensor components stored on this class"""
+        tensor_names, ctx = self.__tensor_flatten__()
+
+        # Apply the function to each tensor component
+        new_tensors = {}
+        for name in tensor_names:
+            new_tensors[name] = fn(getattr(self, name))
+
+        return self.__class__.__tensor_unflatten__(
+            new_tensors,
+            ctx,
+            None,  # outer_size parameter
+            None,  # outer_stride parameter
         )
 
     # Do not force the MXTensor type on the returned tensor
